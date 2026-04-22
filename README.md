@@ -1,7 +1,7 @@
 # /shop
 
 A conversational AI shopping assistant built on Next.js 15, the Anthropic
-Claude API, and a curated static catalog scraped from curated.supply.
+Claude API, and a curated static catalog scraped from the internet.
 
 ## What's inside
 
