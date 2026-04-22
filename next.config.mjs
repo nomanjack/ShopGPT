@@ -13,6 +13,13 @@ const nextConfig = {
   turbopack: {
     root: rootDir,
   },
+  async redirects() {
+    return [
+      // Renamed from /shopshop to /shop/summary. Keep the old path alive so any
+      // link already shared still lands on the case study.
+      { source: '/shopshop', destination: '/shop/summary', permanent: true },
+    ]
+  },
 }
 
 export default nextConfig

@@ -265,10 +265,12 @@ type PoolResult = {
   widenedToAll: boolean
 }
 
-// Safety net. If the live web search comes up empty, the request falls
-// through to a curated list of small-maker Shopify stores I put together.
-// Their /products.json gets fetched, scored by token overlap, and sent to
-// Haiku to pick three. Keeps the page from ever feeling empty.
+// Primary path. Every query classifies against a curated list of small-maker
+// Shopify stores I put together; when it matches a known category, their
+// /products.json gets fetched, scored by token overlap, and the top candidates
+// are sent to Haiku to pick three. Sonnet + web_search only runs when the
+// registry can't produce a clean set (no category match, or no product
+// actually contains the query's head noun).
 async function buildCandidatePool(queryChain: string[], limit = 28): Promise<PoolResult> {
   const allTokens = new Set<string>()
   for (const q of queryChain) {
@@ -408,9 +410,9 @@ ${candidateLines}${recentIntroLines}`
   try {
     const abort = new AbortController()
     const timer = setTimeout(() => abort.abort(), 25_000)
-    // Haiku 4.5 handles the registry fallback. Sonnet does the live search
-    // upstream. Haiku is fast enough that the fallback doesn't feel like a
-    // wait when web search comes up empty.
+    // Haiku 4.5 runs the primary catalog path: it picks 3 products from the
+    // Shopify /products.json candidates and writes the intro + followups. It's
+    // fast enough to turn a matched-category query around in ~2–3 s.
     const msg = await client.messages.create(
       {
         model: 'claude-haiku-4-5-20251001',
@@ -457,9 +459,11 @@ ${candidateLines}${recentIntroLines}`
 
 type WebSearchModel = 'claude-haiku-4-5' | 'claude-sonnet-4-6'
 
-// Sonnet 4.6 with web search enabled is the main path. I wanted real products
-// with real prices, not synthetic ones. The model returns 7 candidates so the
-// downstream step has slack when a few are missing images or descriptions.
+// Sonnet 4.6 with web_search enabled is the long-tail fallback. It runs only
+// when the Shopify registry can't satisfy the query — categories the curated
+// store list doesn't carry (electronics, luggage, books, etc.). The model
+// returns 7 candidates so the downstream step has slack when some are missing
+// images or descriptions.
 async function webSearchCompose(
   query: string,
   history: string[],
