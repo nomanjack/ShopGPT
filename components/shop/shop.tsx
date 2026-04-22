@@ -1541,8 +1541,13 @@ function CutoutTraveler({ item, leaving }: { item: IdleCutout; leaving: boolean 
         position: 'absolute',
         top: 0,
         left: 0,
+        // Fix the bounding box to size × size so portrait cutouts (e.g.
+        // luggage, stands) can't overflow past the y0 range and land off-
+        // screen. object-fit: contain preserves the image aspect ratio
+        // inside that box without stretching.
         width: item.size,
-        height: 'auto',
+        height: item.size,
+        objectFit: 'contain',
         userSelect: 'none',
         opacity,
         transform: `translate3d(${at.x}px, ${at.y}px, 0) rotate(${at.rot}deg) scale(${scale})`,
@@ -1568,7 +1573,7 @@ function IdleCutouts({ active, onActiveChange }: { active: boolean; onActiveChan
     let timer: number | null = null
     let unmountTimer: number | null = null
 
-    const schedule = () => {
+    const schedule = (delayMs: number) => {
       if (timer) window.clearTimeout(timer)
       timer = window.setTimeout(() => {
         const vw = window.innerWidth
@@ -1579,7 +1584,7 @@ function IdleCutouts({ active, onActiveChange }: { active: boolean; onActiveChan
         setItems(makePopcornBatch(srcs, vw, vh))
         setLeaving(false)
         onActiveChangeRef.current?.(true)
-      }, 5000)
+      }, delayMs)
     }
 
     const clear = () => {
@@ -1595,10 +1600,11 @@ function IdleCutouts({ active, onActiveChange }: { active: boolean; onActiveChan
         return prev
       })
       onActiveChangeRef.current?.(false)
-      schedule()
+      // After a dismiss, wait 5s of real idle before the cutouts come back.
+      schedule(5000)
     }
 
-    schedule()
+    schedule(5000)
     window.addEventListener('mousemove', clear, { passive: true })
     window.addEventListener('mousedown', clear, { passive: true })
     window.addEventListener('keydown', clear)
@@ -2313,11 +2319,14 @@ const COMPOSER_SUGGESTIONS = [
 ]
 
 const PLACEHOLDER_ROTATION: readonly string[] = [
-  'warm cozy textiles under $80',
-  'a hand-thrown mug for pour-over',
-  'quiet navy knitwear for layering',
-  'minimal objects for a small desk',
-  'an earthy candle, cedar or fig',
+  'a macbook for light design work',
+  'a low-profile mechanical keyboard',
+  'a handheld console for retro games',
+  'a macro pad with a knob',
+  'a desk stand for my phone',
+  'a coffee table book on architecture',
+  'an aluminum carry-on under 8kg',
+  'a gradient poster for above the desk',
 ] as const
 
 function Composer({
